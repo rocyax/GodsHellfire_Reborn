@@ -1,0 +1,29 @@
+# IDE and editor state
+.vs/
+.idea/
+*.suo
+*.user
+*.csproj.user
+
+# .NET and tModLoader build outputs
+bin/
+obj/
+TestResults/
+*.binlog
+*.dll
+*.pdb
+*.deps.json
+*.tmod
+
+# Local logs, decompiler output, and scratch files
+*.log
+decompiled/
+_decompile/
+scratch/
+tmp/
+.temp/
+
+# Operating-system metadata
+Thumbs.db
+Desktop.ini
+.DS_Store
