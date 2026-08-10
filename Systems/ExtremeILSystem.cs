@@ -160,9 +160,24 @@ internal class ExtremeILSystem : ModSystem
 		var cursor = new ILCursor(il);
 		int patchedReturns = 0;
 
+		// MoveType.AfterLabel makes ILCursor retarget ILLabel objects and the
+		// TryEnd/HandlerEnd boundaries of any exception handler that ends at this
+		// ret, so the barrier is never emitted inside a handler region.
 		while (cursor.TryGotoNext(MoveType.AfterLabel, instruction => instruction.OpCode == OpCodes.Ret))
 		{
+			Instruction originalReturn = cursor.Next;
+			int barrierStartIndex = cursor.Index;
+
 			emitBarrier(cursor);
+
+			// ILCursor only retargets ILLabel operands. A method body imported from
+			// the assembly still branches with raw Cecil Instruction operands, so a
+			// branch/leave aimed straight at this ret would jump over the barrier.
+			// Terraria.Player.Update is exactly that shape: one ret, reached by four
+			// leave instructions. Redirect them onto the first emitted instruction.
+			if (cursor.Index > barrierStartIndex)
+				RedirectRawBranches(il, originalReturn, il.Instrs[barrierStartIndex]);
+
 			patchedReturns++;
 
 			// The emitted instructions are immediately before the original ret.
@@ -177,6 +192,38 @@ internal class ExtremeILSystem : ModSystem
 				ModContent.GetInstance<global::GodsHellfire_Reborn.GodsHellfire_Reborn>(),
 				il,
 				cause);
+		}
+	}
+
+	/// <summary>
+	/// Repoints raw Cecil branch operands from <paramref name="originalReturn"/> to
+	/// <paramref name="barrierStart"/>. Only reachability changes: a branch which
+	/// previously landed on the ret now runs the barrier and falls through into the
+	/// same ret. A leave leaving a protected region still executes its finally
+	/// blocks first, because the barrier sits outside those regions.
+	/// </summary>
+	private static void RedirectRawBranches(ILContext il, Instruction originalReturn, Instruction barrierStart)
+	{
+		foreach (Instruction instruction in il.Instrs)
+		{
+			if (ReferenceEquals(instruction, barrierStart))
+				continue;
+
+			if (ReferenceEquals(instruction.Operand, originalReturn))
+			{
+				instruction.Operand = barrierStart;
+				continue;
+			}
+
+			// A switch stores an operand array; rewrite only the matching entries.
+			if (instruction.Operand is Instruction[] targets)
+			{
+				for (int i = 0; i < targets.Length; i++)
+				{
+					if (ReferenceEquals(targets[i], originalReturn))
+						targets[i] = barrierStart;
+				}
+			}
 		}
 	}
 }

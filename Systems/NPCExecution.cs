@@ -197,22 +197,22 @@ internal static class NPCExecution
 			return;
 		}
 
-		List<int> relatedParts = SnapshotRelatedParts(primary, hitTarget, forceParent);
+		List<NPC> relatedParts = SnapshotRelatedParts(primary, hitTarget, forceParent);
 		ExecuteSingle(primary);
 
 		// Segments and Moon Lord appendages are one logical entity. They are
 		// deactivated without their own loot pass after the primary has died.
-		foreach (int index in relatedParts)
+		// The snapshot holds NPC references rather than slot indices: executing the
+		// primary can free slots, and a replacement phase spawned by a death hook
+		// may occupy one of them before this loop runs. A reference cannot be
+		// redirected onto that unrelated new entity by slot reuse.
+		foreach (NPC part in relatedParts)
 		{
-			if (index < 0 || index >= Main.maxNPCs || index == primary.whoAmI)
+			if (ReferenceEquals(part, primary) || !CanExecute(part))
 				continue;
 
-			NPC part = Main.npc[index];
-			if (CanExecute(part))
-			{
-				SetPersistentVerdict(part, PersistentVerdict.Execution);
-				ForceDeactivate(part);
-			}
+			SetPersistentVerdict(part, PersistentVerdict.Execution);
+			ForceDeactivate(part);
 		}
 	}
 
@@ -235,15 +235,15 @@ internal static class NPCExecution
 		return hitTarget;
 	}
 
-	private static List<int> SnapshotRelatedParts(NPC primary, NPC hitTarget, bool forceParent)
+	private static List<NPC> SnapshotRelatedParts(NPC primary, NPC hitTarget, bool forceParent)
 	{
-		var result = new List<int>();
+		var result = new List<NPC>();
 
 		for (int i = 0; i < Main.maxNPCs; i++)
 		{
 			NPC npc = Main.npc[i];
 			if (npc.active && (npc.whoAmI == primary.whoAmI || npc.realLife == primary.whoAmI))
-				result.Add(i);
+				result.Add(npc);
 		}
 
 		if (forceParent && primary.type == NPCID.MoonLordCore)
@@ -255,13 +255,13 @@ internal static class NPCExecution
 					continue;
 
 				NPC nearestCore = FindNearestMoonLordCore(npc);
-				if (nearestCore?.whoAmI == primary.whoAmI && !result.Contains(i))
-					result.Add(i);
+				if (nearestCore?.whoAmI == primary.whoAmI && !result.Contains(npc))
+					result.Add(npc);
 			}
 		}
 
-		if (!result.Contains(hitTarget.whoAmI))
-			result.Add(hitTarget.whoAmI);
+		if (!result.Contains(hitTarget))
+			result.Add(hitTarget);
 
 		return result;
 	}
