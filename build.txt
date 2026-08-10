@@ -1,0 +1,5 @@
+displayName = [Admin/OP/Cheat]GodsHellfire Reborn
+author = L0st_Illusi0n (original) & rocyax (Reborn)
+version = 1.4
+side = Both
+buildIgnore = *.csproj, *.user, obj\*, bin\*, .vs\*, Properties\*, *.tmod, extract.log, *.deps.json, workshop.json

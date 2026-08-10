@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>GodsHellfire_Reborn</RootNamespace>
+		<AssemblyName>GodsHellfire_Reborn</AssemblyName>
+		<GodsHellfireRebornTMLTargets Condition="Exists('..\tModLoader.targets')">..\tModLoader.targets</GodsHellfireRebornTMLTargets>
+		<GodsHellfireRebornTMLTargets Condition="'$(GodsHellfireRebornTMLTargets)' == '' and Exists('$(USERPROFILE)\Documents\My Games\Terraria\tModLoader\ModSources\tModLoader.targets')">$(USERPROFILE)\Documents\My Games\Terraria\tModLoader\ModSources\tModLoader.targets</GodsHellfireRebornTMLTargets>
+	</PropertyGroup>
+
+	<Import Project="$(GodsHellfireRebornTMLTargets)" Condition="'$(GodsHellfireRebornTMLTargets)' != ''" />
+
+	<Target Name="CheckTModLoaderTargets" BeforeTargets="PrepareForBuild" Condition="'$(GodsHellfireRebornTMLTargets)' == ''">
+		<Error Text="Could not find tModLoader.targets. Place this project in the tModLoader ModSources folder or set GodsHellfireRebornTMLTargets." />
+	</Target>
+
+</Project>

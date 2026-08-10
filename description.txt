@@ -1,0 +1,12 @@
+[Admin/OP/Cheat] God's Hellfire Reborn
+
+An unofficial continuation of the discontinued God's Hellfire mod originally created by L0st_Illusi0n.
+
+This mod provides administrator-only weapons and an accessory with extremely powerful execution, entity-clearing, and god-mode abilities. The items have no crafting recipes and must be obtained through an item browser or another administration tool.
+
+This Reborn version is focused on Terraria 1.4.4 single-player use. Do not enable it together with the legacy God's Hellfire mod.
+
+Original mod and assets: L0st_Illusi0n
+Reborn maintenance and new functionality: rocyax
+
+这是已停止维护的 God's Hellfire 模组之非官方续作，面向 Terraria 1.4.4 单人模式。模组中的物品均为管理员/作弊物品，没有制作配方，需要使用物品浏览器或管理工具获取。请勿与旧版 God's Hellfire 同时启用。

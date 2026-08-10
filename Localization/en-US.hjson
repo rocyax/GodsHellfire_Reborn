@@ -1,0 +1,28 @@
+Mods: {
+	GodsHellfire_Reborn: {
+		Items: {
+			GodsHellfire: {
+				DisplayName: God's Hellfire A Side
+				Tooltip:
+					'''
+					execute any enemy...
+					Right click: execute every non-town NPC
+					'''
+			}
+
+			GodsHellfire_Force: {
+				DisplayName: God's Hellfire B Side
+				Tooltip:
+					'''
+					Unconditionally execute any enemy...
+					Right click: delete every non-town NPC and every projectile
+					'''
+			}
+
+			Absolute_God: {
+				DisplayName: Absolute_God
+				Tooltip: Absolute immunity to damage, death, and forced kills while equipped
+			}
+		}
+	}
+}

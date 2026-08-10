@@ -1,0 +1,12 @@
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\bin\Release\net8.0\GodsHellfire_Reborn.deps.json
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\bin\Release\net8.0\GodsHellfire_Reborn.dll
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\bin\Release\net8.0\GodsHellfire_Reborn.pdb
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\obj\Release\net8.0\GodsHellfire_Reborn.csproj.AssemblyReference.cache
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\obj\Release\net8.0\GodsHellfire_Reborn.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\obj\Release\net8.0\GodsHellfire_Reborn.AssemblyInfoInputs.cache
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\obj\Release\net8.0\GodsHellfire_Reborn.AssemblyInfo.cs
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\obj\Release\net8.0\GodsHellfire_Reborn.csproj.CoreCompileInputs.cache
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\obj\Release\net8.0\GodsHellfire_Reborn.dll
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\obj\Release\net8.0\refint\GodsHellfire_Reborn.dll
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\obj\Release\net8.0\GodsHellfire_Reborn.pdb
+C:\Users\rocyax\Documents\My Games\Terraria\tModLoader\ModSources\GodsHellfire_Reborn\obj\Release\net8.0\ref\GodsHellfire_Reborn.dll

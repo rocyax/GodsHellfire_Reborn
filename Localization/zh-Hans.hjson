@@ -1,0 +1,28 @@
+Mods: {
+	GodsHellfire_Reborn: {
+		Items: {
+			GodsHellfire: {
+				DisplayName: 神狱镰刀A面
+				Tooltip:
+					'''
+					处决任何敌人.....
+					右键：处决所有非城镇 NPC
+					'''
+			}
+
+			GodsHellfire_Force: {
+				DisplayName: 神狱镰刀B面
+				Tooltip:
+					'''
+					无条件地处决任何敌人......
+					右键：删除所有非城镇 NPC 与全部弹射物
+					'''
+			}
+
+			Absolute_God: {
+				DisplayName: 绝对防御
+				Tooltip: 佩戴时免疫伤害、死亡与强制击杀
+			}
+		}
+	}
+}
