@@ -88,6 +88,6 @@ public class GodsHellfire : ModItem
 
 	public override void OnHitNPC(Player player, NPC target, NPC.HitInfo hit, int damageDone)
 	{
-		NPCExecution.Execute(target, forceParent: false);
+		NPCExecution.Execute(target);
 	}
 }

@@ -17,7 +17,7 @@ public class GodsHellfire_Force : GodsHellfire
 
 	public override void OnHitNPC(Player player, NPC target, NPC.HitInfo hit, int damageDone)
 	{
-		NPCExecution.Execute(target, forceParent: true);
+		NPCExecution.Execute(target);
 	}
 
 	protected override void PerformWorldClear()
@@ -36,7 +36,7 @@ public class GodsHellfire_Force : GodsHellfire
 		{
 			NPC npc = Main.npc[i];
 			if (NPCExecution.CanExecute(npc) && hitbox.Intersects(npc.Hitbox))
-				NPCExecution.Execute(npc, forceParent: true);
+				NPCExecution.Execute(npc);
 		}
 	}
 }

@@ -61,14 +61,14 @@ public class HellfireProjectileBehavior : GlobalProjectile
 		{
 			NPC npc = Main.npc[i];
 			if (NPCExecution.CanExecute(npc) && Collides(projectile, npc.Hitbox))
-				NPCExecution.Execute(npc, forceParent: true);
+				NPCExecution.Execute(npc);
 		}
 	}
 
 	public override void OnHitNPC(Projectile projectile, NPC target, NPC.HitInfo hit, int damageDone)
 	{
 		if (mode != HellfireMode.None)
-			NPCExecution.Execute(target, forceParent: mode == HellfireMode.Force);
+			NPCExecution.Execute(target);
 	}
 
 	public override Color? GetAlpha(Projectile projectile, Color lightColor)

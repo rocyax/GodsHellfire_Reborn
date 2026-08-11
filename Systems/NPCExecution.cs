@@ -176,7 +176,7 @@ internal static class NPCExecution
 		}
 	}
 
-	internal static void Execute(NPC hitTarget, bool forceParent)
+	internal static void Execute(NPC hitTarget)
 	{
 		if (!CanExecute(hitTarget))
 			return;
@@ -187,7 +187,7 @@ internal static class NPCExecution
 			return;
 		}
 
-		NPC primary = ResolvePrimaryTarget(hitTarget, forceParent);
+		NPC primary = ResolvePrimaryTarget(hitTarget);
 		if (!CanExecute(primary))
 			return;
 
@@ -197,11 +197,11 @@ internal static class NPCExecution
 			return;
 		}
 
-		List<NPC> relatedParts = SnapshotRelatedParts(primary, hitTarget, forceParent);
+		List<NPC> relatedParts = SnapshotRelatedParts(primary, hitTarget);
 		ExecuteSingle(primary);
 
-		// Segments and Moon Lord appendages are one logical entity. They are
-		// deactivated without their own loot pass after the primary has died.
+		// Segments linked by Terraria's realLife field are one logical entity. They
+		// are deactivated without their own loot pass after the primary has died.
 		// The snapshot holds NPC references rather than slot indices: executing the
 		// primary can free slots, and a replacement phase spawned by a death hook
 		// may occupy one of them before this loop runs. A reference cannot be
@@ -218,19 +218,19 @@ internal static class NPCExecution
 
 	/// <summary>
 	/// Diagnostic single-target counterpart to the deletion sweep. This uses the
-	/// same persistent deletion verdict and logical-parent resolution as the
+	/// same persistent deletion verdict and vanilla realLife linkage as the
 	/// production execution path, but deliberately invokes no death or loot hook.
 	/// </summary>
-	internal static void Delete(NPC hitTarget, bool forceParent)
+	internal static void Delete(NPC hitTarget)
 	{
 		if (!CanExecute(hitTarget))
 			return;
 
-		NPC primary = ResolvePrimaryTarget(hitTarget, forceParent);
+		NPC primary = ResolvePrimaryTarget(hitTarget);
 		if (!CanExecute(primary))
 			return;
 
-		List<NPC> relatedParts = SnapshotRelatedParts(primary, hitTarget, forceParent);
+		List<NPC> relatedParts = SnapshotRelatedParts(primary, hitTarget);
 		ForceDelete(primary);
 
 		foreach (NPC part in relatedParts)
@@ -240,7 +240,7 @@ internal static class NPCExecution
 		}
 	}
 
-	private static NPC ResolvePrimaryTarget(NPC hitTarget, bool forceParent)
+	private static NPC ResolvePrimaryTarget(NPC hitTarget)
 	{
 		if (hitTarget.realLife >= 0 && hitTarget.realLife < Main.maxNPCs)
 		{
@@ -249,17 +249,10 @@ internal static class NPCExecution
 				return realLife;
 		}
 
-		if (forceParent && IsMoonLordPart(hitTarget.type))
-		{
-			NPC core = FindNearestMoonLordCore(hitTarget);
-			if (core != null)
-				return core;
-		}
-
 		return hitTarget;
 	}
 
-	private static List<NPC> SnapshotRelatedParts(NPC primary, NPC hitTarget, bool forceParent)
+	private static List<NPC> SnapshotRelatedParts(NPC primary, NPC hitTarget)
 	{
 		var result = new List<NPC>();
 
@@ -268,20 +261,6 @@ internal static class NPCExecution
 			NPC npc = Main.npc[i];
 			if (npc.active && (npc.whoAmI == primary.whoAmI || npc.realLife == primary.whoAmI))
 				result.Add(npc);
-		}
-
-		if (forceParent && primary.type == NPCID.MoonLordCore)
-		{
-			for (int i = 0; i < Main.maxNPCs; i++)
-			{
-				NPC npc = Main.npc[i];
-				if (!npc.active || !IsMoonLordPart(npc.type))
-					continue;
-
-				NPC nearestCore = FindNearestMoonLordCore(npc);
-				if (nearestCore?.whoAmI == primary.whoAmI && !result.Contains(npc))
-					result.Add(npc);
-			}
 		}
 
 		if (!result.Contains(hitTarget))
@@ -450,40 +429,10 @@ internal static class NPCExecution
 			if (mode == WorldSweepMode.Deletion)
 				ForceDelete(npc);
 			else
-				Execute(npc, forceParent: true);
+				Execute(npc);
 		}
 
 		return foundNPC;
-	}
-
-	private static bool IsMoonLordPart(int type)
-	{
-		return type == NPCID.MoonLordCore ||
-			type == NPCID.MoonLordHead ||
-			type == NPCID.MoonLordHand ||
-			type == NPCID.MoonLordFreeEye;
-	}
-
-	private static NPC FindNearestMoonLordCore(NPC npc)
-	{
-		NPC nearest = null;
-		float nearestDistanceSquared = float.MaxValue;
-
-		for (int i = 0; i < Main.maxNPCs; i++)
-		{
-			NPC candidate = Main.npc[i];
-			if (!candidate.active || candidate.type != NPCID.MoonLordCore)
-				continue;
-
-			float distanceSquared = (candidate.Center - npc.Center).LengthSquared();
-			if (distanceSquared < nearestDistanceSquared)
-			{
-				nearest = candidate;
-				nearestDistanceSquared = distanceSquared;
-			}
-		}
-
-		return nearest;
 	}
 
 	internal static void QueueDescendant(NPC npc)
@@ -531,7 +480,7 @@ internal static class NPCExecution
 				if (verdict == PersistentVerdict.Deletion)
 					ForceDelete(npc);
 				else if (verdict == PersistentVerdict.Execution)
-					Execute(npc, forceParent: false);
+					Execute(npc);
 			}
 		}
 	}

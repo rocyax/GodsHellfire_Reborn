@@ -87,7 +87,7 @@ public sealed class GodsHellfireDiagnosticCommand : ModCommand
 			"/ghrdiag snapshot [label]               write a world snapshot\n" +
 			"/ghrdiag mark <text>                    add a manual observation\n" +
 			"/ghrdiag npc list [radius]              list up to 12 non-town NPCs\n" +
-			"/ghrdiag npc execute <slot> <normal|force> confirm\n" +
+			"/ghrdiag npc execute <slot> confirm       execute one logical NPC entity\n" +
 			"/ghrdiag npc delete <slot> confirm      delete one logical NPC entity\n" +
 			"/ghrdiag sweep <execute|delete> confirm run the production world sweep\n" +
 			"/ghrdiag defense confirm                test Hurt, KillMe, and raw fields\n" +
@@ -267,30 +267,29 @@ public sealed class GodsHellfireDiagnosticCommand : ModCommand
 	{
 		NPC target = null;
 		string error = null;
-		if (args.Length < 5 || !TryGetTarget(args[2], out target, out error))
+		if (args.Length < 4 || !TryGetTarget(args[2], out target, out error))
 		{
-			caller.Reply($"[GHR-TEST] {error ?? "Usage: /ghrdiag npc execute <slot> <normal|force> confirm"}", Color.OrangeRed);
+			caller.Reply($"[GHR-TEST] {error ?? "Usage: /ghrdiag npc execute <slot> confirm"}", Color.OrangeRed);
 			return;
 		}
 
-		string mode = args[3].ToLowerInvariant();
-		if ((mode != "normal" && mode != "force") || !IsConfirmation(args[4]))
+		if (!IsConfirmation(args[3]))
 		{
-			caller.Reply("[GHR-TEST] Usage: /ghrdiag npc execute <slot> <normal|force> confirm", Color.OrangeRed);
+			caller.Reply("[GHR-TEST] Usage: /ghrdiag npc execute <slot> confirm", Color.OrangeRed);
 			return;
 		}
 
 		NpcDiagnosticEntry before = DiagnosticData.CaptureNpc(target);
 		try
 		{
-			NPCExecution.Execute(target, forceParent: mode == "force");
+			NPCExecution.Execute(target);
 			NpcDiagnosticEntry after = DiagnosticData.CaptureNpc(target);
-			DiagnosticSession.Record("npc-execute", "invoked", new { mode, before, after });
-			caller.Reply($"[GHR-TEST] {mode} execution invoked for slot {before.Slot}; active after immediate pass={after.Active}.", Color.LightGreen);
+			DiagnosticSession.Record("npc-execute", "invoked", new { before, after });
+			caller.Reply($"[GHR-TEST] Execution invoked for slot {before.Slot}; active after immediate pass={after.Active}.", Color.LightGreen);
 		}
 		catch (Exception exception)
 		{
-			DiagnosticSession.Record("npc-execute", "exception", new { mode, before, exception = exception.ToString() });
+			DiagnosticSession.Record("npc-execute", "exception", new { before, exception = exception.ToString() });
 			caller.Reply($"[GHR-TEST] Execution threw {exception.GetType().Name}; export the report.", Color.OrangeRed);
 		}
 	}
@@ -308,7 +307,7 @@ public sealed class GodsHellfireDiagnosticCommand : ModCommand
 		NpcDiagnosticEntry before = DiagnosticData.CaptureNpc(target);
 		try
 		{
-			NPCExecution.Delete(target, forceParent: true);
+			NPCExecution.Delete(target);
 			NpcDiagnosticEntry after = DiagnosticData.CaptureNpc(target);
 			DiagnosticSession.Record("npc-delete", "invoked", new { before, after });
 			caller.Reply($"[GHR-TEST] Deletion invoked for logical NPC at slot {before.Slot}; active after immediate pass={after.Active}.", Color.LightGreen);
