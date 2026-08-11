@@ -3,6 +3,8 @@ This is a cheat/debug mod that adds three admin items. You can find them in Chea
 The mod utilizes AIGC (GPT-5.6 sol & Opus5) but has undergone rigorous testing.
 The mod might be incompatible with multiplayer mode.
 
+Source Code: [url=https://github.com/rocyax/GodsHellfire_Reborn]Github[/url]
+
 这是由 L0st_Illusi0n 原创、现已停止更新的“God's Hellfire”模组的非官方续作。
 这是一个作弊/调试mod, 添加了三件管理员物品。你可以在Cheat Sheet或Hero's Mod中找到它们。
 mod使用了AIGC（GPT 5.6 sol & Opus5），但经过较严格的测试。
