@@ -190,28 +190,26 @@ internal class ExtremeILSystem : ModSystem
 		var cursor = new ILCursor(il);
 		int patchedReturns = 0;
 
-		// MoveType.AfterLabel makes ILCursor retarget ILLabel objects and the
-		// TryEnd/HandlerEnd boundaries of any exception handler that ends at this
-		// ret, so the barrier is never emitted inside a handler region.
+		// MoveType.AfterLabel makes ILCursor:
+		//   1. Retarget any ILLabel objects that were pointing at this ret onto the
+		//      first inserted barrier instruction, so incoming branches (including
+		//      leave instructions from try regions such as those in Player.Update)
+		//      enter the barrier rather than bypassing it.
+		//   2. Retarget the TryEnd/HandlerEnd of any exception handler that ends at
+		//      this ret, so the barrier is never emitted inside a handler region.
+		//
+		// ILContext.Invoke converts every raw Cecil Instruction/Instruction[] branch
+		// operand into an ILLabel before calling this manipulator, and each ILLabel
+		// registers itself in the context's label list. MoveAfterLabels() therefore
+		// captures all incoming branches — including the four leave instructions in
+		// Terraria.Player.Update — through the standard ILLabel mechanism. No
+		// separate raw-operand rewrite is needed.
 		while (cursor.TryGotoNext(MoveType.AfterLabel, instruction => instruction.OpCode == OpCodes.Ret))
 		{
-			Instruction originalReturn = cursor.Next;
-			int barrierStartIndex = cursor.Index;
-
 			emitBarrier(cursor);
-
-			// ILCursor only retargets ILLabel operands. A method body imported from
-			// the assembly still branches with raw Cecil Instruction operands, so a
-			// branch/leave aimed straight at this ret would jump over the barrier.
-			// Terraria.Player.Update is exactly that shape: one ret, reached by four
-			// leave instructions. Redirect them onto the first emitted instruction.
-			if (cursor.Index > barrierStartIndex)
-				RedirectRawBranches(il, originalReturn, il.Instrs[barrierStartIndex]);
-
 			patchedReturns++;
 
-			// The emitted instructions are immediately before the original ret.
-			// Advance over that ret so the next search cannot match it again.
+			// Advance over the original ret so the next TryGotoNext cannot match it.
 			cursor.Index++;
 		}
 
@@ -222,38 +220,6 @@ internal class ExtremeILSystem : ModSystem
 				ModContent.GetInstance<global::GodsHellfire_Reborn.GodsHellfire_Reborn>(),
 				il,
 				cause);
-		}
-	}
-
-	/// <summary>
-	/// Repoints raw Cecil branch operands from <paramref name="originalReturn"/> to
-	/// <paramref name="barrierStart"/>. Only reachability changes: a branch which
-	/// previously landed on the ret now runs the barrier and falls through into the
-	/// same ret. A leave leaving a protected region still executes its finally
-	/// blocks first, because the barrier sits outside those regions.
-	/// </summary>
-	private static void RedirectRawBranches(ILContext il, Instruction originalReturn, Instruction barrierStart)
-	{
-		foreach (Instruction instruction in il.Instrs)
-		{
-			if (ReferenceEquals(instruction, barrierStart))
-				continue;
-
-			if (ReferenceEquals(instruction.Operand, originalReturn))
-			{
-				instruction.Operand = barrierStart;
-				continue;
-			}
-
-			// A switch stores an operand array; rewrite only the matching entries.
-			if (instruction.Operand is Instruction[] targets)
-			{
-				for (int i = 0; i < targets.Length; i++)
-				{
-					if (ReferenceEquals(targets[i], originalReturn))
-						targets[i] = barrierStart;
-				}
-			}
 		}
 	}
 }
