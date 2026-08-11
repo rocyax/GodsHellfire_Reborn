@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
+using GodsHellfire_Reborn.Diagnostics;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using Terraria;
@@ -14,8 +16,12 @@ namespace GodsHellfire_Reborn.Systems;
 /// </summary>
 internal class ExtremeILSystem : ModSystem
 {
+	private static readonly List<ILBarrierDiagnosticStatus> barrierStatuses = new();
+
 	public override void Load()
 	{
+		barrierStatuses.Clear();
+
 		TryInstall(
 			typeof(NPCLoader),
 			nameof(NPCLoader.CheckDead),
@@ -77,7 +83,7 @@ internal class ExtremeILSystem : ModSystem
 			nameof(SystemLoader.PostUpdateEverything),
 			BindingFlags.Public | BindingFlags.Static,
 			Type.EmptyTypes,
-			PatchSystemBoundaryReturns,
+			PatchFinalSystemBoundaryReturns,
 			"SystemLoader.PostUpdateEverything Absolute_God barrier");
 	}
 
@@ -92,6 +98,7 @@ internal class ExtremeILSystem : ModSystem
 		MethodInfo method = declaringType.GetMethod(methodName, bindingFlags, null, parameterTypes, null);
 		if (method == null)
 		{
+			barrierStatuses.Add(new ILBarrierDiagnosticStatus(description, installed: false, "Target method was not found."));
 			Mod.Logger.Warn($"Could not find {description}; the existing non-IL fallback remains active.");
 			return;
 		}
@@ -99,6 +106,7 @@ internal class ExtremeILSystem : ModSystem
 		try
 		{
 			MonoModHooks.Modify(method, manipulator);
+			barrierStatuses.Add(new ILBarrierDiagnosticStatus(description, installed: true, null));
 			Mod.Logger.Info($"Installed {description}.");
 		}
 		catch (Exception exception)
@@ -106,8 +114,22 @@ internal class ExtremeILSystem : ModSystem
 			// A tModLoader update or another IL edit must not make the whole mod
 			// unloadable. Existing execution/deactivation and On_ detours remain as
 			// the compatibility fallback if an optional outer barrier cannot apply.
+			barrierStatuses.Add(new ILBarrierDiagnosticStatus(
+				description,
+				installed: false,
+				$"{exception.GetType().FullName}: {exception.Message}"));
 			Mod.Logger.Warn($"Could not install {description}; the existing non-IL fallback remains active.\n{exception}");
 		}
+	}
+
+	internal static ILBarrierDiagnosticStatus[] GetBarrierStatuses()
+	{
+		return barrierStatuses.ToArray();
+	}
+
+	public override void Unload()
+	{
+		barrierStatuses.Clear();
 	}
 
 	private static void PatchNPCDeathGateReturns(ILContext il)
@@ -153,6 +175,14 @@ internal class ExtremeILSystem : ModSystem
 			il,
 			cursor => cursor.EmitDelegate<Action>(AbsoluteGodSystem.RestoreProtectedPlayers),
 			"system update boundary");
+	}
+
+	private static void PatchFinalSystemBoundaryReturns(ILContext il)
+	{
+		PatchEveryReturn(
+			il,
+			cursor => cursor.EmitDelegate<Action>(DiagnosticSystem.RunPostUpdateEverythingBoundary),
+			"final system update boundary");
 	}
 
 	private static void PatchEveryReturn(ILContext il, Action<ILCursor> emitBarrier, string description)
@@ -226,4 +256,18 @@ internal class ExtremeILSystem : ModSystem
 			}
 		}
 	}
+}
+
+internal sealed class ILBarrierDiagnosticStatus
+{
+	internal ILBarrierDiagnosticStatus(string description, bool installed, string detail)
+	{
+		Description = description;
+		Installed = installed;
+		Detail = detail;
+	}
+
+	internal string Description { get; }
+	internal bool Installed { get; }
+	internal string Detail { get; }
 }

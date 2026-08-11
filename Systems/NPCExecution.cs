@@ -216,6 +216,30 @@ internal static class NPCExecution
 		}
 	}
 
+	/// <summary>
+	/// Diagnostic single-target counterpart to the deletion sweep. This uses the
+	/// same persistent deletion verdict and logical-parent resolution as the
+	/// production execution path, but deliberately invokes no death or loot hook.
+	/// </summary>
+	internal static void Delete(NPC hitTarget, bool forceParent)
+	{
+		if (!CanExecute(hitTarget))
+			return;
+
+		NPC primary = ResolvePrimaryTarget(hitTarget, forceParent);
+		if (!CanExecute(primary))
+			return;
+
+		List<NPC> relatedParts = SnapshotRelatedParts(primary, hitTarget, forceParent);
+		ForceDelete(primary);
+
+		foreach (NPC part in relatedParts)
+		{
+			if (!ReferenceEquals(part, primary) && CanExecute(part))
+				ForceDelete(part);
+		}
+	}
+
 	private static NPC ResolvePrimaryTarget(NPC hitTarget, bool forceParent)
 	{
 		if (hitTarget.realLife >= 0 && hitTarget.realLife < Main.maxNPCs)
@@ -572,6 +596,27 @@ internal static class NPCExecution
 		Array.Clear(PersistentVerdicts, 0, PersistentVerdicts.Length);
 		activeWorldSweep = WorldSweepMode.None;
 		worldSweepTicksRemaining = 0;
+	}
+
+	internal static (string WorldSweep, int SweepTicksRemaining, int PendingExecutions, int PendingDeletions, int ActiveExecutionDepth) GetDiagnosticState()
+	{
+		return (
+			activeWorldSweep.ToString(),
+			worldSweepTicksRemaining,
+			PendingExecutions.Count,
+			PendingDeletions.Count,
+			activeExecutionTargets?.Count ?? 0);
+	}
+
+	internal static (string Verdict, int SpawnGeneration, int VerdictGeneration) GetDiagnosticState(NPC npc)
+	{
+		if (!TryGetSlot(npc, out int index))
+			return (PersistentVerdict.None.ToString(), 0, 0);
+
+		return (
+			GetEffectiveVerdict(npc).ToString(),
+			SpawnGenerations[index],
+			VerdictGenerations[index]);
 	}
 
 	internal static void SuppressReactivatedNPCs()
