@@ -14,8 +14,8 @@ public class Absolute_God : ModItem
 		Item.width = 64;
 		Item.height = 64;
 		Item.accessory = true;
-		Item.value = 99000000;
-		Item.rare = ItemRarityID.Master;
+		Item.value = 0;
+		Item.rare = ItemRarityID.Expert;
 	}
 
 	public override void UpdateAccessory(Player player, bool hideVisual)

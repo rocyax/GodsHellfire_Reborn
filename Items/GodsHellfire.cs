@@ -22,8 +22,8 @@ public class GodsHellfire : ModItem
 		Item.useAnimation = 20;
 		Item.useStyle = ItemUseStyleID.Swing;
 		Item.knockBack = 6f;
-		Item.value = 99000000;
-		Item.rare = ItemRarityID.Master;
+		Item.value = 0;
+		Item.rare = ItemRarityID.Expert;
 		Item.UseSound = SoundID.DD2_BetsyFlameBreath;
 		Item.autoReuse = true;
 		worldClearUse = false;
