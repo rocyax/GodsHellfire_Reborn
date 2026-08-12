@@ -20,11 +20,10 @@ namespace GodsHellfire_Reborn.Projectiles;
 /// </summary>
 public class HellfireProjectileBehavior : GlobalProjectile
 {
-	// Some NPCs deliberately draw shields, forcefields, or oversized bodies a
-	// little beyond their logical hitbox. Force is an administrator weapon, so
-	// tolerate a modest visual/logical mismatch without turning contact into a
-	// proximity-wide execution. Normal Hellfire projectiles remain unchanged.
-	private const int ForceContactPadding = 32;
+	// DD2SquireSonicBoom has a 16x16 entity hitbox, but vanilla damage uses an
+	// 80x16 line perpendicular to its velocity instead.
+	private const float SonicBoomHalfLength = 40f;
+	private const float SonicBoomHalfWidth = 8f;
 
 	private enum HellfireMode : byte
 	{
@@ -53,17 +52,36 @@ public class HellfireProjectileBehavior : GlobalProjectile
 			mode = HellfireMode.Normal;
 	}
 
-	public override void AI(Projectile projectile)
+	public override bool PreAI(Projectile projectile)
 	{
-		if (mode != HellfireMode.Force)
-			return;
+		if (mode == HellfireMode.Force)
+		{
+			Lighting.AddLight(projectile.Center, 0f, 0.8f, 0.8f);
+			EnforceForceContact(projectile);
+		}
 
-		Lighting.AddLight(projectile.Center, 0f, 0.8f, 0.8f);
+		// GlobalProjectile.PreAI hooks are all evaluated by tModLoader, even when
+		// another mod returns false and suppresses vanilla/GlobalProjectile.AI.
+		// Never veto the projectile's own AI from this behavior.
+		return true;
+	}
+
+	public override void PostAI(Projectile projectile)
+	{
+		if (mode == HellfireMode.Force)
+			EnforceForceContact(projectile);
+	}
+
+	private static void EnforceForceContact(Projectile projectile)
+	{
+		if (!projectile.active)
+			return;
 
 		// Vanilla projectile damage skips dontTakeDamage/immortal and several
 		// other non-hittable states before OnHitNPC. Force therefore performs its
-		// own contact scan. GlobalProjectile.AI runs before Projectile updates its
-		// position, so test both the current and imminent visual positions.
+		// own contact scan. PreAI catches contact even when another mod suppresses
+		// the normal AI path; PostAI catches a position changed later in that path.
+		// The imminent position also covers movement performed after ProjectileAI.
 		for (int i = 0; i < Main.maxNPCs; i++)
 		{
 			NPC npc = Main.npc[i];
@@ -100,35 +118,100 @@ public class HellfireProjectileBehavior : GlobalProjectile
 
 	private static bool ForceCollides(Projectile projectile, Rectangle targetHitbox)
 	{
-		// The padding covers common visual/logical hitbox discrepancies while
-		// retaining an actual overlap requirement. It is intentionally applied
-		// only to Force's manual path, never to Terraria's normal damage system.
-		Rectangle contactHitbox = targetHitbox;
-		contactHitbox.Inflate(ForceContactPadding, ForceContactPadding);
+		// Terraria's thick-line helper misses the containment case where the
+		// complete 80x16 sonic-boom line lies inside a large target AABB. That is
+		// especially visible against Supreme Calamitas' enlarged forcefield
+		// hitbox: crossing an edge succeeds while passing through its center can
+		// fail. Test the exact swept rectangle with SAT instead. Sweeping from the
+		// current to imminent center also prevents high-speed tunnelling.
+		Vector2 forward = projectile.velocity.SafeNormalize(Vector2.UnitY);
+		Vector2 perpendicular = forward.RotatedBy(-MathHelper.PiOver2);
+		float scale = System.MathF.Abs(projectile.scale);
+		float travel = projectile.velocity.Length();
+		Vector2 sweepCenter = projectile.Center + projectile.velocity * 0.5f;
+		float halfForwardExtent = travel * 0.5f + SonicBoomHalfWidth * scale;
+		float halfPerpendicularExtent = SonicBoomHalfLength * scale;
 
-		Vector2 currentCenter = projectile.Center;
-		if (CollidesAt(projectile, contactHitbox, currentCenter))
-			return true;
-
-		Vector2 imminentCenter = currentCenter + projectile.velocity;
-		return imminentCenter != currentCenter &&
-			CollidesAt(projectile, contactHitbox, imminentCenter);
+		return OrientedRectangleIntersectsAabb(
+			targetHitbox,
+			sweepCenter,
+			forward,
+			perpendicular,
+			halfForwardExtent,
+			halfPerpendicularExtent);
 	}
 
-	private static bool CollidesAt(Projectile projectile, Rectangle targetHitbox, Vector2 projectileCenter)
+	private static bool OrientedRectangleIntersectsAabb(
+		Rectangle targetHitbox,
+		Vector2 rectangleCenter,
+		Vector2 forward,
+		Vector2 perpendicular,
+		float halfForwardExtent,
+		float halfPerpendicularExtent)
 	{
-		// Exact collision shape used by vanilla DD2SquireSonicBoom.
-		Vector2 perpendicular = projectile.velocity
-			.SafeNormalize(Vector2.UnitY)
-			.RotatedBy(-MathHelper.PiOver2) * projectile.scale;
-		float collisionPoint = 0f;
+		Vector2 targetCenter = new(
+			targetHitbox.Left + targetHitbox.Width * 0.5f,
+			targetHitbox.Top + targetHitbox.Height * 0.5f);
+		Vector2 targetHalfExtents = new(
+			targetHitbox.Width * 0.5f,
+			targetHitbox.Height * 0.5f);
+		Vector2 centerDelta = targetCenter - rectangleCenter;
 
-		return Collision.CheckAABBvLineCollision(
-			targetHitbox.TopLeft(),
-			targetHitbox.Size(),
-			projectileCenter - perpendicular * 40f,
-			projectileCenter + perpendicular * 40f,
-			16f * projectile.scale,
-			ref collisionPoint);
+		// SAT for an oriented projectile rectangle against a world-axis-aligned
+		// NPC rectangle. All four distinct edge normals must overlap. Unlike the
+		// vanilla thick-line routine, this also accepts either rectangle fully
+		// containing the other.
+		return OverlapsOnAxis(
+			centerDelta,
+			targetHalfExtents,
+			forward,
+			perpendicular,
+			halfForwardExtent,
+			halfPerpendicularExtent,
+			Vector2.UnitX) &&
+			OverlapsOnAxis(
+				centerDelta,
+				targetHalfExtents,
+				forward,
+				perpendicular,
+				halfForwardExtent,
+				halfPerpendicularExtent,
+				Vector2.UnitY) &&
+			OverlapsOnAxis(
+				centerDelta,
+				targetHalfExtents,
+				forward,
+				perpendicular,
+				halfForwardExtent,
+				halfPerpendicularExtent,
+				forward) &&
+			OverlapsOnAxis(
+				centerDelta,
+				targetHalfExtents,
+				forward,
+				perpendicular,
+				halfForwardExtent,
+				halfPerpendicularExtent,
+				perpendicular);
+	}
+
+	private static bool OverlapsOnAxis(
+		Vector2 centerDelta,
+		Vector2 targetHalfExtents,
+		Vector2 forward,
+		Vector2 perpendicular,
+		float halfForwardExtent,
+		float halfPerpendicularExtent,
+		Vector2 axis)
+	{
+		float targetRadius =
+			targetHalfExtents.X * System.MathF.Abs(axis.X) +
+			targetHalfExtents.Y * System.MathF.Abs(axis.Y);
+		float projectileRadius =
+			halfForwardExtent * System.MathF.Abs(Vector2.Dot(forward, axis)) +
+			halfPerpendicularExtent * System.MathF.Abs(Vector2.Dot(perpendicular, axis));
+		float centerDistance = System.MathF.Abs(Vector2.Dot(centerDelta, axis));
+
+		return centerDistance <= targetRadius + projectileRadius;
 	}
 }
