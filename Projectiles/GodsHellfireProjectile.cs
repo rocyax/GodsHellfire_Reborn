@@ -20,6 +20,12 @@ namespace GodsHellfire_Reborn.Projectiles;
 /// </summary>
 public class HellfireProjectileBehavior : GlobalProjectile
 {
+	// Some NPCs deliberately draw shields, forcefields, or oversized bodies a
+	// little beyond their logical hitbox. Force is an administrator weapon, so
+	// tolerate a modest visual/logical mismatch without turning contact into a
+	// proximity-wide execution. Normal Hellfire projectiles remain unchanged.
+	private const int ForceContactPadding = 32;
+
 	private enum HellfireMode : byte
 	{
 		None,
@@ -55,12 +61,13 @@ public class HellfireProjectileBehavior : GlobalProjectile
 		Lighting.AddLight(projectile.Center, 0f, 0.8f, 0.8f);
 
 		// Vanilla projectile damage skips dontTakeDamage/immortal and several
-		// other non-hittable states before OnHitNPC. Force scans the exact same
-		// collision shape itself so those targets still count as struck.
+		// other non-hittable states before OnHitNPC. Force therefore performs its
+		// own contact scan. GlobalProjectile.AI runs before Projectile updates its
+		// position, so test both the current and imminent visual positions.
 		for (int i = 0; i < Main.maxNPCs; i++)
 		{
 			NPC npc = Main.npc[i];
-			if (NPCExecution.CanExecute(npc) && Collides(projectile, npc.Hitbox))
+			if (NPCExecution.CanExecute(npc) && ForceCollides(projectile, npc.Hitbox))
 				NPCExecution.Execute(npc);
 		}
 	}
@@ -91,7 +98,24 @@ public class HellfireProjectileBehavior : GlobalProjectile
 		mode = (HellfireMode)binaryReader.ReadByte();
 	}
 
-	private static bool Collides(Projectile projectile, Rectangle targetHitbox)
+	private static bool ForceCollides(Projectile projectile, Rectangle targetHitbox)
+	{
+		// The padding covers common visual/logical hitbox discrepancies while
+		// retaining an actual overlap requirement. It is intentionally applied
+		// only to Force's manual path, never to Terraria's normal damage system.
+		Rectangle contactHitbox = targetHitbox;
+		contactHitbox.Inflate(ForceContactPadding, ForceContactPadding);
+
+		Vector2 currentCenter = projectile.Center;
+		if (CollidesAt(projectile, contactHitbox, currentCenter))
+			return true;
+
+		Vector2 imminentCenter = currentCenter + projectile.velocity;
+		return imminentCenter != currentCenter &&
+			CollidesAt(projectile, contactHitbox, imminentCenter);
+	}
+
+	private static bool CollidesAt(Projectile projectile, Rectangle targetHitbox, Vector2 projectileCenter)
 	{
 		// Exact collision shape used by vanilla DD2SquireSonicBoom.
 		Vector2 perpendicular = projectile.velocity
@@ -102,8 +126,8 @@ public class HellfireProjectileBehavior : GlobalProjectile
 		return Collision.CheckAABBvLineCollision(
 			targetHitbox.TopLeft(),
 			targetHitbox.Size(),
-			projectile.Center - perpendicular * 40f,
-			projectile.Center + perpendicular * 40f,
+			projectileCenter - perpendicular * 40f,
+			projectileCenter + perpendicular * 40f,
 			16f * projectile.scale,
 			ref collisionPoint);
 	}
